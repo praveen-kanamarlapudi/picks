@@ -1,6 +1,6 @@
-name: Keep
+name: Picks
 options:
-  bundleIdPrefix: app.keep
+  bundleIdPrefix: app.picks
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -22,46 +22,46 @@ settings:
     ENABLE_HARDENED_RUNTIME: NO
 
 targets:
-  KeepCore:
+  PicksCore:
     type: framework
     platform: macOS
     sources:
-      - Keep/Catalog
-      - Keep/Indexer
-      - Keep/Shortlist
-      - Keep/Support
-      - Keep/Export
+      - Picks/Catalog
+      - Picks/Indexer
+      - Picks/Shortlist
+      - Picks/Support
+      - Picks/Export
     dependencies:
       - package: GRDB
         product: GRDB
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.keep.mac.core
-        PRODUCT_NAME: KeepCore
+        PRODUCT_BUNDLE_IDENTIFIER: app.picks.mac.core
+        PRODUCT_NAME: PicksCore
         SKIP_INSTALL: YES
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         DEFINES_MODULE: YES
         ENABLE_HARDENED_RUNTIME: NO
 
-  Keep:
+  Picks:
     type: application
     platform: macOS
     sources:
-      - Keep/App
-      - Keep/Viewer
-      - Keep/Assets.xcassets
+      - Picks/App
+      - Picks/Viewer
+      - Picks/Assets.xcassets
     dependencies:
-      - target: KeepCore
+      - target: PicksCore
         embed: true
         codeSign: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.keep.mac
-        PRODUCT_NAME: Keep
+        PRODUCT_BUNDLE_IDENTIFIER: app.picks.mac
+        PRODUCT_NAME: Picks
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_ENTITLEMENTS: Keep/Keep.entitlements
-        INFOPLIST_KEY_CFBundleDisplayName: Keep
+        CODE_SIGN_ENTITLEMENTS: Picks/Picks.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: Picks
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.photography
         INFOPLIST_KEY_LSMinimumSystemVersion: "14.0"
         INFOPLIST_KEY_NSHighResolutionCapable: YES
@@ -71,30 +71,30 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
     entitlements:
-      path: Keep/Keep.entitlements
+      path: Picks/Picks.entitlements
       properties:
         com.apple.security.cs.disable-library-validation: true
 
-  KeepTests:
+  PicksTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - KeepTests
+      - PicksTests
     dependencies:
-      - target: KeepCore
+      - target: PicksCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.keep.mac.tests
+        PRODUCT_BUNDLE_IDENTIFIER: app.picks.mac.tests
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
 
 schemes:
-  Keep:
+  Picks:
     build:
       targets:
-        Keep: all
-        KeepCore: [build, test]
-        KeepTests: [test]
+        Picks: all
+        PicksCore: [build, test]
+        PicksTests: [test]
     test:
       targets:
-        - KeepTests
+        - PicksTests

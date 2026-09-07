@@ -1,9 +1,9 @@
-# Keep — Implementation Plan
+# Picks — Implementation Plan
 
 Status: Ready to build  
 Source of truth for *what*: [`requirements.md`](requirements.md)  
 Source of truth for *how / order*: this file  
-UX reference: [`../design/keep-screens.html`](../design/keep-screens.html)
+UX reference: [`../design/picks-screens.html`](../design/picks-screens.html)
 
 First vertical slice: **Phases 0–3**. Do not start Home / Export / Grid until that loop is right.
 
@@ -34,17 +34,17 @@ Reference tree: a nested photographer dump (Google Drive File Stream or a local 
 
 ## Repo layout
 
-Create an Xcode app target at the repo root (or `Keep/`). Keep existing `design/` and `docs/` where they are.
+Create an Xcode app target at the repo root (or `Picks/`). Leave existing `design/` and `docs/` where they are.
 
 ```
 docs/requirements.md
 docs/plan.md
-design/keep-screens.html
+design/picks-screens.html
 
-Keep.xcodeproj
-Keep/
+Picks.xcodeproj
+Picks/
   App/
-    KeepApp.swift
+    PicksApp.swift
     AppModel.swift              # open event, routing: home / scan / review
     SupportPaths.swift          # Application Support / event-id
   Catalog/
@@ -75,20 +75,20 @@ Keep/
     Exporter.swift              # Phase 5
   Resources/
     Fixtures/MiniDump/          # unit-test tree
-KeepTests/
+PicksTests/
   PathRulesTests.swift
   PairingTests.swift
   IndexerTests.swift
   MarkStoreTests.swift
 ```
 
-Bundle id: `app.keep.mac` (changeable). Product name: **Keep**.
+Bundle id: `app.picks.mac` (changeable). Product name: **Picks**.
 
 ---
 
 ## Data
 
-`~/Library/Application Support/Keep/<event-id>/`
+`~/Library/Application Support/Picks/<event-id>/`
 
 - `catalog.sqlite`
 - `thumbs/` (generated, disposable)
@@ -140,12 +140,12 @@ Marks flush on every Space / X. Never write into the photo tree.
 
 ## Phase 0 — Project
 
-**Files:** `KeepApp.swift`, `SupportPaths.swift`, `EventBookmark.swift`
+**Files:** `PicksApp.swift`, `SupportPaths.swift`, `EventBookmark.swift`
 
 - New macOS App sandbox, User Selected File (read).
 - Window: drop zone / “Choose folder…” (`NSOpenPanel`, directories only).
 - Save security-scoped bookmark. On launch, `startAccessingSecurityScopedResource()`.
-- Create `Application Support/Keep/<event-id>/`.
+- Create `Application Support/Picks/<event-id>/`.
 
 **Exit**
 
@@ -192,7 +192,7 @@ If `_duplicate_report/true_content_duplicates.csv` exists, mark extra copies `hi
 
 Live counts matching requirements §4. “Start reviewing” enabled once the first ceremony has rows (thumbs can still be building).
 
-### Fixture (`Keep/Resources/Fixtures/MiniDump/`)
+### Fixture (`Picks/Resources/Fixtures/MiniDump/`)
 
 ```
 01 Engagement/Candid Photos/JPG/AKHI0001.JPG          # jpeg-only
@@ -330,7 +330,7 @@ Maps to acceptance 10.
 
 Test on:
 
-1. `Keep/Resources/Fixtures/MiniDump`
+1. `Picks/Resources/Fixtures/MiniDump`
 2. `01 Engagement` (JPEG-only, `AKHI*`, `_MG_*`)
 3. A sliver of `03 Wedding/…/RAW` (`M3F*`) so RAW-default is real
 

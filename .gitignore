@@ -33,7 +33,8 @@ backups/
 folder.bookmark
 *.bookmark
 
-# Photographer dumps and Keep's on-dump trash folder, if copied into the tree
+# Photographer dumps and Picks' on-dump trash folder, if copied into the tree
+.PicksTrash/
 .KeepTrash/
 
 # Family / local design stills used only on this machine
@@ -52,5 +53,5 @@ design/thumbs/
 .env.*
 
 # Xcode user state inside the generated project
-Keep.xcodeproj/project.xcworkspace/xcuserdata/
-Keep.xcodeproj/xcuserdata/
+Picks.xcodeproj/project.xcworkspace/xcuserdata/
+Picks.xcodeproj/xcuserdata/

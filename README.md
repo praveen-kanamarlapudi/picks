@@ -1,4 +1,4 @@
-# Keep
+# Picks
 
 A native macOS app for a couple or family to shortlist stills from a photographer’s dump and export camera IDs.
 
@@ -18,14 +18,14 @@ It is not an editor, not a gallery, and not Photo Mechanic.
 make build      # Release .app under .build/
 make test
 make install    # copy to /Applications
-make dmg        # dist/Keep.dmg
+make dmg        # dist/Picks.dmg
 ```
 
 Or generate the Xcode project and open it:
 
 ```sh
 xcodegen generate
-open Keep.xcodeproj
+open Picks.xcodeproj
 ```
 
 ## Product locks
@@ -35,20 +35,21 @@ open Keep.xcodeproj
 - Same camera stem in sibling `JPG/` + `RAW/` (or the same folder) is **one photo**.
 - Canonical file is **RAW when it exists**; JPEG only if there is no RAW.
 - Loupe quality matches macOS Preview (ImageIO / Quick Look on the canonical file).
-- Marks live in local SQLite. Keep does not write into the photo tree except when you explicitly move a photo to Trash.
+- Marks live in local SQLite. Picks does not write into the photo tree except when you explicitly move a photo to Trash.
 - Export: `photo-ids.txt` + `shortlist.csv`, plus Copy IDs.
 
 Locked spec: [`docs/requirements.md`](docs/requirements.md).  
-Clickable UX mockup: [`design/keep-screens.html`](design/keep-screens.html) (placeholder tiles; family photos are not in this repo).
+Clickable UX mockup: [`design/picks-screens.html`](design/picks-screens.html) (placeholder tiles; family photos are not in this repo).
 
 ## Privacy
 
 This repository is **source only**. It does not include photographer dumps, catalogs, shortlists, or design stills from a real event.
 
-Local catalogs stay on the Mac:
+Local catalogs stay on the Mac. After the Keep → Picks rename, Picks still opens catalogs from the old Keep folder if that is where they already live:
 
 ```
 ~/Library/Containers/app.keep.mac/Data/Library/Application Support/Keep/<event-id>/
+~/Library/Application Support/Picks/<event-id>/
 ```
 
 `make backup` writes snapshots to `backups/`, which is gitignored. Do not add dumps, `.sqlite` catalogs, or `folder.bookmark` files to git.

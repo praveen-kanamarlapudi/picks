@@ -1,16 +1,16 @@
-# Keep — Requirements
+# Picks — Requirements
 
 Status: **Locked**  
 Date: 2026-08-12  
 Reference dump: a nested wedding photographer dump (~19k files, ~526 GB, Google Drive File Stream)
 
-This file is the product source of truth. The clickable spec in `design/keep-screens.html` illustrates it. If they disagree, this file wins.
+This file is the product source of truth. The clickable spec in `design/picks-screens.html` illustrates it. If they disagree, this file wins.
 
 ---
 
 ## 1. Product
 
-Keep is a native Mac app for a **couple / family**, not a photographer.
+Picks is a native Mac app for a **couple / family**, not a photographer.
 
 You point it at a photographer’s dump. You walk stills. You build **one shortlist**. You export **camera IDs** the photographer can search (`M3F03442`, `AKHI0355`, `_S9A7954`).
 
@@ -104,7 +104,7 @@ Given an event root folder (example: `Wedding`):
 ### Duplicates
 
 - If `_duplicate_report/true_content_duplicates.csv` exists, ingest it.
-- Hide extra exact copies. Keep one (prefer Candid over Traditional when both exist).
+- Hide extra exact copies. Retain one (prefer Candid over Traditional when both exist).
 - Same basename in different events is **not** a duplicate.
 
 ### Cloud / Drive
@@ -192,7 +192,7 @@ Quit is always safe. Marks flush on every Space / X.
 ## 6. Persistence
 
 ```
-~/Library/Application Support/Keep/<event-id>/
+~/Library/Application Support/Picks/<event-id>/
   catalog.sqlite
   thumbs/                  # generated, disposable
   folder.bookmark          # security-scoped bookmark
@@ -288,4 +288,4 @@ First slice: Phases 0–3 (project, indexer, loupe, marks). Home, export, and gr
 
 ## 12. Spec artifact
 
-`design/keep-screens.html` — clickable UX. Persistence in the HTML is `localStorage` (demo only). The app uses SQLite as specified above.
+`design/picks-screens.html` — clickable UX. Persistence in the HTML is `localStorage` (demo only). The app uses SQLite as specified above.
