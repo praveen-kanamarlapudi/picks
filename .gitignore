@@ -1,0 +1,56 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Xcode / Swift
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+.build/
+build/
+.swiftpm/
+timeline.xctimeline
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Generated installers and copies of the app
+dist/
+*.dmg
+*.app
+
+# Local catalogs, bookmarks, and DB backups — never publish
+backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+folder.bookmark
+*.bookmark
+
+# Photographer dumps and Keep's on-dump trash folder, if copied into the tree
+.KeepTrash/
+
+# Family / local design stills used only on this machine
+design/previews/
+design/thumbs/
+
+# Agent / editor local state
+.claude/
+.grok/
+.cursor/
+.idea/
+.vscode/
+*.swp
+*~
+.env
+.env.*
+
+# Xcode user state inside the generated project
+Keep.xcodeproj/project.xcworkspace/xcuserdata/
+Keep.xcodeproj/xcuserdata/

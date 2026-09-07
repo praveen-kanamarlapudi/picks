@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keep — locked screen spec</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --chrome: #121214;
+      --chrome-2: #18181b;
+      --line: rgba(255,255,255,0.08);
+      --line-2: rgba(255,255,255,0.14);
+      --text: #f4f4f5;
+      --muted: #8b8b93;
+      --dim: #5c5c64;
+      --gold: #e8c36a;
+      --gold-dim: rgba(232,195,106,0.16);
+      --gold-line: rgba(232,195,106,0.4);
+      --ok: #7dcea0;
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+      --sans: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: var(--sans);
+      background: #070708;
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 232px 1fr 300px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ---- board chrome ---- */
+    .nav, .notes {
+      background: #0d0d0f;
+      border-right: 1px solid var(--line);
+      padding: 22px 16px;
+      overflow: auto;
+    }
+    .notes { border-right: 0; border-left: 1px solid var(--line); }
+    .brand {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+      margin: 0 8px 4px;
+    }
+    .brand-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 8px 22px;
+      line-height: 1.4;
+    }
+    .nav button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .nav button:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+    .nav button.active {
+      background: var(--gold-dim);
+      color: var(--gold);
+    }
+    .nav .sec {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin: 18px 10px 6px;
+    }
+    .stage {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background:
+        radial-gradient(1200px 400px at 50% -10%, rgba(232,195,106,0.06), transparent 50%),
+        #070708;
+    }
+    .stage-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 22px 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stage-bar strong { color: var(--text); font-weight: 560; }
+    .mac {
+      margin: 8px 22px 22px;
+      flex: 1;
+      min-height: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--chrome);
+      border: 1px solid var(--line-2);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+    }
+    .titlebar {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      background: var(--chrome-2);
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #febc2e; }
+    .dot.g { background: #28c840; }
+    .titlebar .appname {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 52px;
+    }
+    .app {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- notes ---- */
+    .notes h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 4px 0 10px;
+    }
+    .notes p, .notes li {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #b8b8bf;
+    }
+    .notes ul { padding-left: 16px; margin: 8px 0 14px; }
+    .notes .k {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      background: #1c1c20;
+      border: 1px solid var(--line);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--text);
+    }
+    .notes .call {
+      background: #16140f;
+      border: 1px solid var(--gold-line);
+      color: #e8d7a8;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    /* ---- open / scan / home ---- */
+    .center-pane {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .drop {
+      width: min(520px, 100%);
+      border: 1px dashed rgba(255,255,255,0.18);
+      border-radius: 16px;
+      padding: 48px 36px;
+      text-align: center;
+      background: rgba(255,255,255,0.02);
+    }
+    .drop h1 { font-size: 28px; font-weight: 560; letter-spacing: -0.03em; margin: 0 0 8px; }
+    .drop p { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+    .btn {
+      border: 0;
+      background: var(--text);
+      color: #111;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 560;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn.ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line-2);
+    }
+    .btn.gold {
+      background: var(--gold);
+      color: #1a1406;
+    }
+    .scan {
+      width: min(560px, 100%);
+    }
+    .scan h2 { margin: 0 0 6px; font-weight: 560; letter-spacing: -0.02em; }
+    .scan .path { color: var(--muted); font-size: 12px; margin-bottom: 22px; }
+    .stat { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .stat span:last-child { color: var(--muted); }
+    .bar { height: 4px; background: #2a2a2e; border-radius: 99px; margin: 18px 0 8px; overflow: hidden; }
+    .bar i { display: block; height: 100%; width: 38%; background: var(--gold); }
+
+    .home {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 18px;
+      overflow: auto;
+    }
+    .home-head {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 4px 4px 8px;
+    }
+    .home-head h2 { margin: 0; font-size: 20px; font-weight: 560; letter-spacing: -0.03em; }
+    .home-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .card {
+      background: var(--chrome-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      padding: 0;
+    }
+    .card:hover { border-color: var(--line-2); }
+    .card:active { transform: scale(0.985); }
+    .ph {
+      --h: 32;
+      background:
+        radial-gradient(120% 80% at 18% 12%, hsla(var(--h), 42%, 72%, 0.5), transparent 52%),
+        radial-gradient(90% 90% at 82% 88%, hsla(calc(var(--h) + 36), 34%, 42%, 0.55), transparent 56%),
+        linear-gradient(160deg, hsl(var(--h), 22%, 24%), hsl(calc(var(--h) + 18), 16%, 10%));
+    }
+    .card .cover {
+      height: 92px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+    .card .cover .warn {
+      position: absolute;
+      right: 8px; top: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #f0c14b;
+      font-size: 10px;
+      padding: 3px 6px;
+      border-radius: 99px;
+    }
+    .card .body { padding: 10px 12px 12px; }
+    .card h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 560; }
+    .card .meta { color: var(--muted); font-size: 11.5px; }
+    .prog { height: 3px; background: #2a2a2e; border-radius: 99px; margin: 8px 0 6px; overflow: hidden; }
+    .prog i { display: block; height: 100%; background: var(--gold); }
+
+    /* ---- review: full-bleed photo, chrome overlays ---- */
+    .mac.is-review .titlebar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 6;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent);
+      border-bottom: 0;
+    }
+    .mac { position: relative; }
+    .review {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    .photo-bg {
+      position: absolute;
+      inset: -24px;
+      background-size: cover;
+      background-position: center;
+      filter: blur(28px) saturate(1.05);
+      transform: scale(1.08);
+      opacity: 0.45;
+    }
+    .photo-fg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      filter: none;
+      image-rendering: auto;
+    }
+    .photo-fg.ph {
+      inset: 7% 12%;
+      width: auto;
+      height: auto;
+      border-radius: 2px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    }
+    .hud-top, .hud-bottom {
+      position: absolute;
+      left: 0; right: 0;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .hud-top {
+      top: 38px;
+      padding: 8px 14px 28px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+    }
+    .hud-bottom {
+      bottom: 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 36px 12px 10px;
+      background: linear-gradient(to top, rgba(0,0,0,0.62), transparent);
+    }
+    .hud-top > *, .hud-bottom .keys, .hud-bottom .strip { pointer-events: auto; }
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .persist {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.55);
+      margin-left: 4px;
+      white-space: nowrap;
+    }
+    .persist i {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #7dcea0;
+      display: inline-block;
+    }
+    .crumb { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+    .crumb b { color: var(--text); font-weight: 560; }
+    .seg {
+      display: flex;
+      background: #0c0c0e;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 2px;
+    }
+    .seg button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .seg { background: rgba(0,0,0,0.35); border-color: rgba(255,255,255,0.12); }
+    .seg button.on { background: rgba(255,255,255,0.16); color: var(--text); }
+    .seg button .n { color: var(--gold); font-variant-numeric: tabular-nums; }
+    .filters { display: flex; gap: 4px; }
+    .filters button {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--dim);
+      font: inherit;
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 99px;
+      cursor: pointer;
+    }
+    .filters button.on {
+      color: var(--text);
+      border-color: var(--line-2);
+      background: #1c1c20;
+    }
+    .counts { margin-left: auto; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .event-pick {
+      appearance: none;
+      border: 0;
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 560;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      max-width: 160px;
+    }
+    .empty-loupe {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      z-index: 3;
+      padding: 24px;
+    }
+    .empty-loupe > div { max-width: 340px; }
+    .empty-loupe h3 { margin: 0 0 6px; color: var(--text); font-weight: 560; }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: rgba(255,255,255,0.72);
+    }
+    .id { color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+    .badge {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid var(--line-2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--muted);
+    }
+    .star-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.4);
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .star-btn:active { transform: scale(0.97); }
+    .star-btn.in {
+      background: var(--gold-dim);
+      border-color: var(--gold-line);
+      color: var(--gold);
+    }
+    .star-btn svg { width: 13px; height: 13px; }
+
+    .keys {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.78);
+    }
+    .keys span { display: inline-flex; align-items: center; gap: 6px; }
+    .keys kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      min-width: 18px;
+      text-align: center;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: #fff;
+    }
+    .strip {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      align-items: center;
+      justify-content: center;
+    }
+    .thumb {
+      position: relative;
+      width: 56px;
+      height: 42px;
+      flex: 0 0 auto;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      padding: 0;
+      background: #000;
+      cursor: pointer;
+    }
+    .thumb img,
+    .thumb .ph { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb.on { border-color: #fff; }
+    .thumb .pip {
+      position: absolute;
+      top: 5px; right: 5px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: #1a1406;
+      display: grid;
+      place-items: center;
+    }
+    .thumb .pip svg { width: 9px; height: 9px; }
+    .hint {
+      margin-left: auto;
+      color: var(--dim);
+      font-size: 11px;
+      white-space: nowrap;
+      padding-right: 6px;
+    }
+
+    /* grid */
+    .review.is-grid { background: #0b0b0c; }
+    .review.is-grid .hud-top { position: relative; top: 0; background: #141416; padding: 8px 14px; }
+    .grid-view {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 8px 10px 48px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      align-content: start;
+      background: #0b0b0c;
+    }
+    .gtile {
+      position: relative;
+      aspect-ratio: 4/3;
+      border: 2px solid transparent;
+      padding: 0;
+      background: #111;
+      cursor: pointer;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .gtile img,
+    .gtile .ph { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gtile.on { border-color: #fff; }
+    .gtile .pip {
+      position: absolute; top: 6px; right: 6px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--gold);
+      display: grid; place-items: center;
+    }
+    .gtile .pip svg { width: 10px; height: 10px; }
+    .gtile .cap {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 10px 6px 4px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.75));
+      font-size: 10px; color: #ddd;
+    }
+
+    /* export */
+    .export {
+      width: min(480px, 100%);
+      background: #161618;
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      padding: 22px 22px 18px;
+    }
+    .export h2 { margin: 0 0 4px; font-size: 18px; font-weight: 560; }
+    .export .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 16px; }
+    .row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .row small { display: block; color: var(--dim); font-size: 11.5px; margin-top: 2px; }
+    .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+    .done {
+      text-align: center;
+      max-width: 420px;
+    }
+    .done h2 { font-weight: 560; letter-spacing: -0.03em; margin: 0 0 8px; }
+    .done p { color: var(--muted); margin: 0 0 18px; }
+
+    @media (max-width: 1180px) {
+      body { grid-template-columns: 200px 1fr; }
+      .notes { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <p class="brand">Keep</p>
+    <p class="brand-sub">Locked screen spec. Two lists: All and Shortlist.</p>
+    <div class="sec">Flow</div>
+    <button data-screen="open" class="active">1. Open dump</button>
+    <button data-screen="scan">2. Scanning</button>
+    <button data-screen="home">3. Event home</button>
+    <div class="sec">The job</div>
+    <button data-screen="review">4. Review · All / Shortlist</button>
+    <button data-screen="grid">5. Grid · membership pips</button>
+    <div class="sec">Edges</div>
+    <button data-screen="empty">6. Empty shortlist</button>
+    <button data-screen="done">7. Ceremony finished</button>
+    <button data-screen="export">8. Export IDs</button>
+  </nav>
+
+  <main class="stage">
+    <div class="stage-bar">
+      <span>Sample dump · <strong>Wedding</strong> (placeholder tiles, no family photos)</span>
+      <span id="stageHint">Click screens on the left. Review is interactive.</span>
+    </div>
+    <section class="mac" aria-label="Keep app">
+      <div class="titlebar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <div class="appname">Keep — Wedding</div>
+      </div>
+      <div class="app" id="app"></div>
+    </section>
+  </main>
+
+  <aside class="notes" id="notes"></aside>
+
+  <script>
+    const DUMP_NAME = "Wedding";
+
+    const PHOTOS = [
+      { id: "AKHI0355", event: "01 Engagement", style: "Candid", raw: false, camera: "AKHI" },
+      { id: "AKHI0356", event: "01 Engagement", style: "Candid", raw: false, camera: "AKHI" },
+      { id: "AKHI0357", event: "01 Engagement", style: "Candid", raw: false, camera: "AKHI" },
+      { id: "AKHI0359", event: "01 Engagement", style: "Candid", raw: false, camera: "AKHI" },
+      { id: "AKHI0360", event: "01 Engagement", style: "Candid", raw: false, camera: "AKHI" },
+      { id: "_MG_6420", event: "01 Engagement", style: "Traditional", raw: false, camera: "MG" },
+      { id: "_MG_6423", event: "01 Engagement", style: "Traditional", raw: false, camera: "MG" },
+      { id: "DMB04998", event: "02 Bride Making", style: "Traditional", raw: true, camera: "DMB" },
+      { id: "DMB05001", event: "02 Bride Making", style: "Traditional", raw: true, camera: "DMB" },
+      { id: "M3F03442", event: "03 Wedding", style: "Candid", raw: true, camera: "M3F" },
+      { id: "M3F03443", event: "03 Wedding", style: "Candid", raw: true, camera: "M3F" },
+      { id: "M3F03445", event: "03 Wedding", style: "Candid", raw: true, camera: "M3F" },
+      { id: "M3F01351", event: "03 Wedding", style: "Traditional", raw: true, camera: "M3F" },
+      { id: "M3F01352", event: "03 Wedding", style: "Traditional", raw: true, camera: "M3F" },
+      { id: "CRU02467", event: "05 Pasupu", style: "Traditional", raw: false, camera: "CRU" },
+      { id: "_S9A7954", event: "06 Groom", style: "Traditional", raw: true, camera: "S9A" },
+      { id: "_DSC4613", event: "08 Upanayanam", style: "Traditional", raw: false, camera: "DSC" },
+    ];
+
+    const EVENTS = [
+      { name: "01 Engagement", stills: 2736, reviewed: 18, keep: 142, left: 2244 },
+      { name: "02 Bride Making", stills: 1047, reviewed: 0, keep: 0, left: 1047 },
+      { name: "03 Wedding", stills: 4597, reviewed: 4, keep: 2, left: 4400 },
+      { name: "04 Vratham & Reception", stills: 522, reviewed: 0, keep: 0, left: 522 },
+      { name: "05 Pasupu", stills: 271, reviewed: 0, keep: 0, left: 271 },
+      { name: "06 Groom", stills: 550, reviewed: 0, keep: 0, left: 550 },
+      { name: "07 Drone", stills: 14, reviewed: 0, keep: 0, left: 14 },
+      { name: "08 Upanayanam", stills: 561, reviewed: 0, keep: 0, left: 561, warn: "0 shortlisted" },
+    ];
+
+    function hue(seed) {
+      let h = 0;
+      for (const c of String(seed)) h = (h * 33 + c.charCodeAt(0)) >>> 0;
+      return h % 360;
+    }
+    function ph(seed, cls = "") {
+      return `<div class="ph ${cls}" style="--h:${hue(seed)}"></div>`;
+    }
+
+    const STORE = "keep.spec.v1";
+    const DEFAULTS = {
+      screen: "open",
+      view: "all",
+      filter: "left",
+      event: "01 Engagement",
+      lastId: "AKHI0355",
+      shortlisted: ["AKHI0355", "AKHI0357", "M3F03442", "M3F03445"],
+      passed: ["AKHI0356"],
+    };
+
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(STORE);
+        if (!raw) return { ...DEFAULTS };
+        const d = JSON.parse(raw);
+        return {
+          screen: d.screen || DEFAULTS.screen,
+          view: d.view === "shortlist" ? "shortlist" : "all",
+          filter: ["everything", "left", "passed"].includes(d.filter) ? d.filter : "left",
+          event: d.event || DEFAULTS.event,
+          lastId: d.lastId || null,
+          shortlisted: Array.isArray(d.shortlisted) ? d.shortlisted : DEFAULTS.shortlisted,
+          passed: Array.isArray(d.passed) ? d.passed : DEFAULTS.passed,
+        };
+      } catch {
+        return { ...DEFAULTS };
+      }
+    }
+
+    const saved = loadStore();
+    const state = {
+      screen: saved.screen,
+      view: saved.view,
+      filter: saved.filter,
+      event: saved.event,
+      index: 0,
+      lastId: saved.lastId,
+      shortlisted: new Set(saved.shortlisted),
+      passed: new Set(saved.passed),
+      savedAt: saved.screen ? Date.now() : null,
+    };
+
+    const bookmark = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.4A1.4 1.4 0 0 1 5.4 1h5.2A1.4 1.4 0 0 1 12 2.4v12.1l-4-2.3-4 2.3V2.4Z"/></svg>`;
+
+    const notes = {
+      open: {
+        title: "Open dump",
+        body: `<p>One job. Point Keep at the photographer folder. No account, no import, no copy of 526 GB.</p>
+        <ul>
+          <li>Security-scoped bookmark to the root.</li>
+          <li>Recent events live here after the first open.</li>
+        </ul>
+        <div class="call">Catalog next to the app (SQLite). Never write into the photo tree. Shortlist, passed, and last photo survive quit.</div>`
+      },
+      scan: {
+        title: "Scanning",
+        body: `<p>A still is a capture. Canonical file is RAW whenever RAW exists. JPEG is the fallback, not the default.</p>
+        <ul>
+          <li>ARW / CR2 present → loupe shows that RAW (Preview path). JPEG is a sidecar.</li>
+          <li>ARW only → same. Fully supported even if this dump has none.</li>
+          <li>JPEG only → loupe shows the JPEG. No RAW badge.</li>
+          <li>Same stem is one tile, never two.</li>
+        </ul>
+        <div class="call">If this sheet is wrong, every later screen is lying.</div>`
+      },
+      home: {
+        title: "Event home",
+        body: `<p>Do not drop the user into 10k photos. Ceremonies are the sitting-down unit.</p>
+        <ul>
+          <li>Progress = reviewed, not only shortlisted. Passing counts.</li>
+          <li>Continue opens the first unreviewed still in that ceremony.</li>
+          <li>Upanayanam looking empty is the coverage warning.</li>
+        </ul>`
+      },
+      review: {
+        title: "Review · full-bleed + saved",
+        body: `<p>The photo owns the window. Chrome sits on top of it. Shortcuts live in the bottom overlay.</p>
+        <ul>
+          <li>Loupe is Preview-sharp on the <em>canonical</em> file: RAW if it exists, otherwise JPEG.</li>
+          <li>Strip and grid may use small thumbs. The big photo may not.</li>
+          <li><span class="k">All</span> / <span class="k">Shortlist</span> stay in the header overlay.</li>
+          <li>Every mark writes immediately. Refresh — the shortlist is still here.</li>
+        </ul>
+        <p>Real app: ImageIO / Quick Look for both <span class="k">.jpg</span> and <span class="k">.arw</span> (and .cr2). That is the Preview path — embedded RAW preview, not a slow demosaic. Thumb first if needed, then full Preview-res. No extra sharpen or blur on the photo.</p>
+        <div class="call">Quit mid-Engagement, open tomorrow, same photo, same shortlist.</div>`
+      },
+      grid: {
+        title: "Grid",
+        body: `<p>For scanning a pile, especially Shortlist when it is a few hundred.</p>
+        <ul>
+          <li>Pip must survive 6-across density. No hover-only hearts.</li>
+          <li>Click focuses. Double-click (here: click) returns to loupe.</li>
+        </ul>`
+      },
+      empty: {
+        title: "Empty shortlist",
+        body: `<p>First-run and after a harsh cut. Never a blank void.</p>
+        <ul>
+          <li>Tell them how to get photos in (Space in All).</li>
+          <li>One action: back to All, left to review.</li>
+        </ul>`
+      },
+      done: {
+        title: "Ceremony finished",
+        body: `<p>Reviewed = shortlisted + passed. Then stop them from wandering.</p>
+        <ul>
+          <li>Offer: look at Shortlist, or start the next ceremony.</li>
+          <li>Do not auto-jump into Wedding. That is how people get lost.</li>
+        </ul>`
+      },
+      export: {
+        title: "Export",
+        body: `<p>Done = one ID list. Photographer searches these stems in their own tool.</p>
+        <ul>
+          <li><span class="k">photo-ids.txt</span> for WhatsApp.</li>
+          <li>CSV carries event, style, JPEG path, RAW path, note.</li>
+          <li>Contact sheet is optional and slow. Off by default.</li>
+        </ul>
+        <div class="call">Copy IDs is the 10-second path. Do not make them save a folder to share a list.</div>`
+      },
+    };
+
+    function inEvent(p) { return p.event === state.event; }
+
+    function visible() {
+      let list = PHOTOS.filter(inEvent);
+      if (state.view === "shortlist") {
+        return list.filter(p => state.shortlisted.has(p.id));
+      }
+      if (state.filter === "left") {
+        return list.filter(p => !state.shortlisted.has(p.id) && !state.passed.has(p.id));
+      }
+      if (state.filter === "passed") {
+        return list.filter(p => state.passed.has(p.id) && !state.shortlisted.has(p.id));
+      }
+      return list;
+    }
+
+    function counts() {
+      const ev = PHOTOS.filter(inEvent);
+      return {
+        all: ev.length,
+        short: ev.filter(p => state.shortlisted.has(p.id)).length,
+        passed: ev.filter(p => state.passed.has(p.id) && !state.shortlisted.has(p.id)).length,
+        left: ev.filter(p => !state.shortlisted.has(p.id) && !state.passed.has(p.id)).length,
+      };
+    }
+
+    function persist() {
+      const cur = current();
+      if (cur) state.lastId = cur.id;
+      localStorage.setItem(STORE, JSON.stringify({
+        screen: state.screen,
+        view: state.view,
+        filter: state.filter,
+        event: state.event,
+        lastId: state.lastId,
+        shortlisted: [...state.shortlisted],
+        passed: [...state.passed],
+      }));
+      state.savedAt = Date.now();
+    }
+
+    function restoreIndex() {
+      if (state.lastId) {
+        const p = PHOTOS.find(x => x.id === state.lastId);
+        if (p) {
+          state.event = p.event;
+          if (state.shortlisted.has(p.id) && state.view === "all" && state.filter === "left") {
+            state.filter = "everything";
+          }
+        }
+      }
+      const v = visible();
+      if (!v.length) { state.index = 0; return; }
+      if (state.lastId) {
+        const i = v.findIndex(p => p.id === state.lastId);
+        if (i >= 0) { state.index = i; return; }
+      }
+      if (state.index >= v.length) state.index = v.length - 1;
+      if (state.index < 0) state.index = 0;
+    }
+
+    function clampIndex() {
+      const v = visible();
+      if (!v.length) { state.index = 0; return; }
+      if (state.index >= v.length) state.index = v.length - 1;
+      if (state.index < 0) state.index = 0;
+    }
+
+    function current() {
+      const v = visible();
+      return v[state.index] || null;
+    }
+
+    function go(delta) {
+      const v = visible();
+      if (!v.length) return;
+      state.index = Math.max(0, Math.min(v.length - 1, state.index + delta));
+      paint();
+    }
+
+    function space() {
+      const p = current();
+      if (!p) return;
+      if (state.view === "shortlist") {
+        state.shortlisted.delete(p.id);
+        // stay in shortlist; photo leaves the working set
+      } else {
+        if (state.shortlisted.has(p.id)) {
+          state.shortlisted.delete(p.id);
+        } else {
+          state.shortlisted.add(p.id);
+          state.passed.delete(p.id);
+          state.index += 1;
+        }
+      }
+      clampIndex();
+      paint();
+    }
+
+    function pass() {
+      const p = current();
+      if (!p) return;
+      if (state.view === "shortlist") {
+        state.shortlisted.delete(p.id);
+      } else {
+        state.shortlisted.delete(p.id);
+        state.passed.add(p.id);
+        state.index += 1;
+      }
+      clampIndex();
+      paint();
+    }
+
+    function setView(v) {
+      const cur = current();
+      state.view = v;
+      if (v === "shortlist") state.filter = "everything";
+      const list = visible();
+      state.index = cur ? Math.max(0, list.findIndex(p => p.id === cur.id)) : 0;
+      if (state.index < 0) state.index = 0;
+      paint();
+    }
+
+    function setFilter(f) {
+      const cur = current();
+      state.filter = f;
+      const list = visible();
+      state.index = cur ? Math.max(0, list.findIndex(p => p.id === cur.id)) : 0;
+      if (state.index < 0) state.index = 0;
+      paint();
+    }
+
+    function setEvent(name) {
+      state.event = name;
+      state.index = 0;
+      state.view = "all";
+      state.filter = "left";
+      paint();
+    }
+
+    function topbar(extraFilters) {
+      const c = counts();
+      const p = current();
+      const on = p && state.shortlisted.has(p.id);
+      const label = !p ? "" : state.view === "shortlist"
+        ? "Remove"
+        : (on ? "In shortlist" : "Add to shortlist");
+      const filters = extraFilters && state.view === "all" ? `
+        <div class="filters">
+          <button class="${state.filter==='everything'?'on':''}" onclick="setFilter('everything')">Everything</button>
+          <button class="${state.filter==='left'?'on':''}" onclick="setFilter('left')">Left</button>
+          <button class="${state.filter==='passed'?'on':''}" onclick="setFilter('passed')">Passed</button>
+        </div>` : "";
+      return `
+        <div class="top">
+          <select class="event-pick" onchange="setEvent(this.value)">
+            ${EVENTS.map(e => `<option value="${e.name}" ${e.name===state.event?'selected':''}>${e.name.replace(/^\d+ /,"")}</option>`).join("")}
+          </select>
+          <div class="seg">
+            <button class="${state.view==='all'?'on':''}" onclick="setView('all')">All <span class="n">${c.all}</span></button>
+            <button class="${state.view==='shortlist'?'on':''}" onclick="setView('shortlist')">Shortlist <span class="n">${c.short}</span></button>
+          </div>
+          ${filters}
+          ${p ? `<div class="meta-row">
+            <button class="star-btn ${on?'in':''}" onclick="space()">${bookmark} ${label}</button>
+            <span class="id">${p.id}</span>
+            ${p.raw ? `<span class="badge">RAW</span>` : ""}
+          </div>` : ""}
+          <div class="counts">Left ${c.left}</div>
+          <span class="persist" title="Saved in this browser. Real app: local SQLite per event."><i></i> Saved</span>
+        </div>`;
+    }
+
+    function keys() {
+      const add = state.view === "shortlist" ? "remove" : "add";
+      const x = state.view === "shortlist" ? "remove" : "pass";
+      return `<div class="keys">
+        <span><kbd>←</kbd><kbd>→</kbd> move</span>
+        <span><kbd>space</kbd> ${add}</span>
+        <span><kbd>X</kbd> ${x}</span>
+        <span><kbd>G</kbd> grid</span>
+        <span><kbd>Z</kbd> zoom</span>
+      </div>`;
+    }
+
+    function filmstrip(list) {
+      if (!list.length) return "";
+      return `<div class="strip">
+        ${list.map((p,i) => `
+          <button class="thumb ${i===state.index?'on':''}" onclick="state.index=${i};state.lastId='${p.id}';paint()">
+            ${ph(p.id)}
+            ${state.shortlisted.has(p.id) ? `<span class="pip">${bookmark}</span>` : ""}
+          </button>`).join("")}
+      </div>`;
+    }
+
+    function emptyBody() {
+      if (state.view === "shortlist") {
+        return `<div class="empty-loupe"><div>
+          <h3>Shortlist is empty</h3>
+          <p>Switch to All and press Space on a photo you want processed.</p>
+          <button class="btn gold" onclick="setView('all')">View All</button>
+        </div></div>`;
+      }
+      if (state.filter === "left") {
+        return `<div class="empty-loupe"><div>
+          <h3>${state.event.replace(/^\d+ /,"")} is reviewed</h3>
+          <p>Look at the shortlist, or pick another ceremony.</p>
+        </div></div>`;
+      }
+      return `<div class="empty-loupe"><div><h3>No photos in this filter</h3></div></div>`;
+    }
+
+    function renderReview() {
+      const list = visible();
+      const p = current();
+      return `<div class="review">
+        ${p ? `${ph(p.id, "photo-bg")}${ph(p.id, "photo-fg")}` : emptyBody()}
+        <div class="hud-top">${topbar(true)}</div>
+        <div class="hud-bottom">
+          ${filmstrip(list)}
+          ${keys()}
+        </div>
+      </div>`;
+    }
+
+    function renderGrid() {
+      const list = state.view === "shortlist"
+        ? PHOTOS.filter(p => state.shortlisted.has(p.id))
+        : PHOTOS.filter(inEvent);
+      return `<div class="review is-grid">
+        <div class="hud-top">${topbar(state.view==='all')}</div>
+        <div class="grid-view">
+          ${list.map((p) => `
+            <button class="gtile ${p.id===state.lastId?'on':''}" onclick="state.event='${p.event}';state.lastId='${p.id}';state.screen='review';paint()">
+              ${ph(p.id)}
+              ${state.shortlisted.has(p.id) ? `<span class="pip">${bookmark}</span>` : ""}
+              <span class="cap">${p.id}</span>
+            </button>`).join("")}
+        </div>
+        <div class="hud-bottom">${keys()}</div>
+      </div>`;
+    }
+
+    function renderHome() {
+      return `<div class="home">
+        <div class="home-head">
+          <div>
+            <h2>${DUMP_NAME}</h2>
+            <p>10,124 stills · ${state.shortlisted.size} shortlisted in this session · last at ${state.lastId || "—"}</p>
+          </div>
+          <button class="btn ghost" onclick="state.screen='export';paint()">Export shortlist</button>
+        </div>
+        ${EVENTS.map(e => `
+          <button class="card" onclick="state.event='${e.name}';state.screen='review';state.view='all';state.filter='left';state.index=0;paint()">
+            <div class="cover ph" style="--h:${hue(e.name)}">${e.warn ? `<span class="warn">${e.warn}</span>` : ""}</div>
+            <div class="body">
+              <h3>${e.name}</h3>
+              <div class="prog"><i style="width:${e.reviewed}%"></i></div>
+              <div class="meta">${e.stills.toLocaleString()} stills · Shortlisted ${e.keep} · Left ${e.left.toLocaleString()}</div>
+            </div>
+          </button>`).join("")}
+      </div>`;
+    }
+
+    const screens = {
+      open() {
+        return `<div class="center-pane"><div class="drop">
+          <h1>Open a photo dump</h1>
+          <p>RAW is the photo when it exists. JPEG only if there is no RAW. Same stem is one still.</p>
+          <button class="btn" onclick="state.screen='scan';paint()">Choose folder…</button>
+        </div></div>`;
+      },
+      scan() {
+        return `<div class="center-pane"><div class="scan">
+          <h2>Scanning</h2>
+          <div class="path">…/Photos/${DUMP_NAME}</div>
+          <div class="stat"><span>Stills</span><span>10,124</span></div>
+          <div class="stat"><span>Canonical RAW (ARW / CR2)</span><span>5,052 · loupe uses RAW</span></div>
+          <div class="stat"><span>JPEG only (no RAW)</span><span>5,072 · loupe uses JPEG</span></div>
+          <div class="stat"><span>RAW only</span><span>0 here · still supported</span></div>
+          <div class="stat"><span>Exact duplicates hidden</span><span>1,021</span></div>
+          <div class="stat"><span>Video thumbs skipped</span><span>1,530</span></div>
+          <div class="stat"><span>Videos ignored</span><span>2,042</span></div>
+          <div class="bar"><i></i></div>
+          <div class="stat"><span>Previews</span><span>1,240 / 10,124</span></div>
+          <div class="actions" style="justify-content:flex-start">
+            <button class="btn gold" onclick="state.screen='home';paint()">Start reviewing</button>
+          </div>
+        </div></div>`;
+      },
+      home: renderHome,
+      review: renderReview,
+      grid: renderGrid,
+      empty() {
+        const prev = state.view;
+        state.view = "shortlist";
+        const html = `<div class="review">
+          ${emptyBody()}
+          <div class="hud-top">${topbar(false)}</div>
+          <div class="hud-bottom">${keys()}</div>
+        </div>`;
+        state.view = prev;
+        return html;
+      },
+      done() {
+        return `<div class="center-pane"><div class="done">
+          <h2>Engagement is reviewed</h2>
+          <p>2,736 stills · 142 shortlisted · 310 passed · 0 left.</p>
+          <div class="actions" style="justify-content:center">
+            <button class="btn gold" onclick="state.screen='review';setView('shortlist')">Review shortlist</button>
+            <button class="btn ghost" onclick="state.event='02 Bride Making';state.screen='review';state.view='all';state.filter='left';state.index=0;paint()">Start Bride Making</button>
+          </div>
+        </div></div>`;
+      },
+      export() {
+        const ids = [...state.shortlisted];
+        return `<div class="center-pane"><div class="export">
+          <h2>Export ${ids.length} photos</h2>
+          <div class="sub">This is the list you send the photographer.</div>
+          <div class="row"><input type="checkbox" checked disabled /> <div><b>photo-ids.txt</b><small>${ids.join(" · ") || "M3F03442"}</small></div></div>
+          <div class="row"><input type="checkbox" checked disabled /> <div><b>shortlist.csv</b><small>id, event, style, camera, jpeg, raw, note</small></div></div>
+          <div class="row"><input type="checkbox" disabled /> <div><b>contact-sheet.pdf</b><small>6-up with IDs. Off by default.</small></div></div>
+          <div class="actions">
+            <button class="btn ghost">Copy IDs</button>
+            <button class="btn">Save to folder…</button>
+          </div>
+        </div></div>`;
+      },
+    };
+
+    function paint() {
+      persist();
+      const bleed = ["review", "grid", "empty"].includes(state.screen);
+      document.querySelector(".mac").classList.toggle("is-review", bleed);
+      document.getElementById("app").innerHTML = screens[state.screen]();
+      document.getElementById("notes").innerHTML = `<h2>${notes[state.screen].title}</h2>${notes[state.screen].body}`;
+      document.querySelectorAll(".nav button[data-screen]").forEach(b => {
+        b.classList.toggle("active", b.dataset.screen === state.screen);
+      });
+      const hint = document.getElementById("stageHint");
+      if (hint) {
+        hint.textContent = bleed
+          ? "Photo is full-bleed. Marks save automatically — refresh to check."
+          : "Click screens on the left. Review is interactive.";
+      }
+    }
+
+    document.querySelectorAll(".nav button[data-screen]").forEach(b => {
+      b.addEventListener("click", () => {
+        state.screen = b.dataset.screen;
+        paint();
+      });
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (state.screen !== "review" && state.screen !== "grid") return;
+      if (e.target.matches("input, textarea")) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+      else if (e.key === " " || e.key === "k" || e.key === "K") { e.preventDefault(); space(); }
+      else if (e.key === "x" || e.key === "X") { e.preventDefault(); pass(); }
+      else if (e.key === "g" || e.key === "G") {
+        e.preventDefault();
+        state.screen = state.screen === "grid" ? "review" : "grid";
+        paint();
+      }
+    });
+
+    // expose for inline handlers
+    Object.assign(window, { state, paint, setView, setFilter, setEvent, space, pass, persist });
+
+    restoreIndex();
+    paint();
+  </script>
+</body>
+</html>
