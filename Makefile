@@ -20,7 +20,7 @@ all: dmg install
 help:
 	@echo "make build      Build $(APP_NAME).app (Release)"
 	@echo "make dmg        Build and package $(DMG)"
-	@echo "make install    Build and copy $(APP_NAME).app to $(APPLICATIONS)"
+	@echo "make install    Backup catalogs, then build and copy $(APP_NAME).app to $(APPLICATIONS)"
 	@echo "make uninstall  Remove $(APPLICATIONS)/$(APP_NAME).app"
 	@echo "make backup     Copy catalogs (+ bookmarks) to $(BACKUP_ROOT)/picks-db-<timestamp>"
 	@echo "make test       Run unit tests"
@@ -66,7 +66,7 @@ dmg: build
 		"$(DMG)"
 	@echo "DMG: $(DMG)"
 
-install: build
+install: backup build
 	rm -rf "$(APPLICATIONS)/$(APP_NAME).app" "$(APPLICATIONS)/Keep.app"
 	cp -R "$(APP)" "$(APPLICATIONS)/"
 	@echo "Installed $(APPLICATIONS)/$(APP_NAME).app"
@@ -76,27 +76,44 @@ uninstall:
 	@echo "Removed $(APPLICATIONS)/$(APP_NAME).app"
 
 # Consistent SQLite snapshot even if Picks is open. Thumbs are skipped (rebuildable).
-# Prefers the current Picks folder, then the pre-rename Keep catalogs.
+# Copies every catalog root that actually has a DB (Picks and pre-rename Keep).
+# Missing catalogs are fine so `make install` still works on a fresh machine.
 backup:
-	@data=""; \
-	for d in "$(PICKS_CONTAINER)" "$(PICKS_DATA)" "$(KEEP_LEGACY)" "$(KEEP_SUPPORT)"; do \
-		if [ -d "$$d" ]; then data="$$d"; break; fi; \
-	done; \
-	test -n "$$data" || (echo "No Picks/Keep catalog data found"; exit 1); \
-	mkdir -p "$(BACKUP_ROOT)"; \
+	@set -euo pipefail; \
 	stamp=$$(date +%Y%m%d-%H%M%S); \
 	dest="$(BACKUP_ROOT)/picks-db-$$stamp"; \
-	mkdir -p "$$dest"; \
-	find "$$data" \( -name 'catalog.sqlite' -o -name 'catalog.sqlite-wal' -o -name 'catalog.sqlite-shm' -o -name 'folder.bookmark' \) -print0 \
-	| while IFS= read -r -d '' f; do \
-		rel="$${f#$$data/}"; \
-		mkdir -p "$$dest/$$(dirname "$$rel")"; \
-		case "$$f" in \
-			*.sqlite) sqlite3 "$$f" ".backup '$$dest/$$rel'" ;; \
-			*) cp "$$f" "$$dest/$$rel" ;; \
-		esac; \
+	found=0; \
+	mkdir -p "$(BACKUP_ROOT)"; \
+	for spec in \
+		"picks-container:$(PICKS_CONTAINER)" \
+		"picks-support:$(PICKS_DATA)" \
+		"keep-legacy:$(KEEP_LEGACY)" \
+		"keep-support:$(KEEP_SUPPORT)"; do \
+		label="$${spec%%:*}"; \
+		data="$${spec#*:}"; \
+		[ -d "$$data" ] || continue; \
+		count=$$(find "$$data" -name 'catalog.sqlite' 2>/dev/null | wc -l | tr -d ' '); \
+		[ "$$count" -gt 0 ] || continue; \
+		found=1; \
+		mkdir -p "$$dest"; \
+		find "$$data" \( -name 'catalog.sqlite' -o -name 'folder.bookmark' \) -print0 \
+		| while IFS= read -r -d '' f; do \
+			rel="$${f#$$data/}"; \
+			out="$$dest/$$rel"; \
+			if [ -e "$$out" ]; then out="$$dest/$$label/$$rel"; fi; \
+			mkdir -p "$$(dirname "$$out")"; \
+			case "$$f" in \
+				*.sqlite) sqlite3 "$$f" ".backup '$$out'" ;; \
+				*) cp "$$f" "$$out" ;; \
+			esac; \
+		done; \
+		echo "Backed up $$count catalog(s) from $$data"; \
 	done; \
-	echo "Backed up $$data to $$dest"
+	if [ "$$found" -eq 0 ]; then \
+		echo "No catalogs to backup"; \
+	else \
+		echo "Backup: $$dest"; \
+	fi
 
 clean:
 	rm -rf $(DERIVED) $(DIST) Picks.xcodeproj/xcuserdata

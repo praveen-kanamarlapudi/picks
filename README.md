@@ -17,7 +17,7 @@ It is not an editor, not a gallery, and not Photo Mechanic.
 ```sh
 make build      # Release .app under .build/
 make test
-make install    # copy to /Applications
+make install    # backup catalogs, then copy to /Applications
 make dmg        # dist/Picks.dmg
 ```
 
