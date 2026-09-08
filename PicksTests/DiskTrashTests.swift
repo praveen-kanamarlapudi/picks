@@ -69,7 +69,7 @@ final class DiskTrashTests: XCTestCase {
         XCTAssertEqual(restored?.id, pk)
     }
 
-    func testDumpTrashFallbackIsUndoable() throws {
+    func testVolumeTrashFallbackIsUndoable() throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("picks-trash-fb-\(UUID().uuidString)", isDirectory: true)
         let nested = dir.appendingPathComponent("Traditional Photos/RAW", isDirectory: true)
@@ -78,9 +78,9 @@ final class DiskTrashTests: XCTestCase {
 
         let raw = nested.appendingPathComponent("DSC00003.ARW")
         try Data("raw".utf8).write(to: raw)
-        let dest = try DiskTrash.moveToDumpTrash(raw, dumpRoot: dir)
+        let dest = try DiskTrash.moveToVolumeTrash(raw)
         XCTAssertFalse(FileManager.default.fileExists(atPath: raw.path))
-        XCTAssertTrue(dest.path.contains(DiskTrash.dumpTrashFolder))
+        XCTAssertTrue(dest.path.contains(".Trash"))
         XCTAssertEqual(try String(contentsOf: dest, encoding: .utf8), "raw")
 
         try DiskTrash.restore([raw: dest])

@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import GRDB
 
@@ -28,10 +27,10 @@ public struct DiskDeleteUndo: Sendable {
     }
 }
 
-/// Moves a photo’s files (RAW + JPEG) to Trash and can put them back.
-/// Google Drive / File Provider often rejects macOS Trash; then we rename into
-/// `dump/.PicksTrash/` on the same volume (undo is a rename back).
+/// Moves a photo’s files (RAW + JPEG) to macOS Trash and can put them back.
+/// Drive files go in the Drive volume trash (`GoogleDrive-…/.Trash`), which Finder shows.
 public enum DiskTrash: Sendable {
+    /// Leftover hidden folders from older builds. Still ignored by the indexer.
     public static let dumpTrashFolder = ".PicksTrash"
     public static let legacyDumpTrashFolder = ".KeepTrash"
 
@@ -49,21 +48,13 @@ public enum DiskTrash: Sendable {
     }
 
     public static func trash(_ urls: [URL], dumpRoot: URL) async throws -> [URL: URL] {
+        _ = dumpRoot
         guard !urls.isEmpty else { throw DiskTrashError.noFiles }
-        var remaining = urls
         var map: [URL: URL] = [:]
-
-        if let recycled = await recycleViaFinder(remaining) {
-            map.merge(recycled) { _, new in new }
-            remaining = remaining.filter { url in
-                FileManager.default.fileExists(atPath: url.path)
-            }
-        }
-
-        var moved: [URL: URL] = map
+        var moved: [URL: URL] = [:]
         do {
-            for url in remaining {
-                let dest = try trashOne(url, dumpRoot: dumpRoot)
+            for url in urls {
+                let dest = try trashOne(url)
                 map[url] = dest
                 moved[url] = dest
             }
@@ -74,28 +65,7 @@ public enum DiskTrash: Sendable {
         return map
     }
 
-    public static func usedDumpTrash(_ map: [URL: URL]) -> Bool {
-        map.values.contains { dest in
-            dest.pathComponents.contains(dumpTrashFolder)
-                || dest.pathComponents.contains(legacyDumpTrashFolder)
-        }
-    }
-
-    /// Finder/LaunchServices trash — this is what actually works on Google Drive.
-    private static func recycleViaFinder(_ urls: [URL]) async -> [URL: URL]? {
-        guard !urls.isEmpty else { return [:] }
-        return await withCheckedContinuation { continuation in
-            NSWorkspace.shared.recycle(urls) { mapping, error in
-                if error != nil {
-                    continuation.resume(returning: nil)
-                } else {
-                    continuation.resume(returning: mapping)
-                }
-            }
-        }
-    }
-
-    private static func trashOne(_ url: URL, dumpRoot: URL) throws -> URL {
+    private static func trashOne(_ url: URL) throws -> URL {
         let accessed = url.startAccessingSecurityScopedResource()
         defer { if accessed { url.stopAccessingSecurityScopedResource() } }
 
@@ -105,26 +75,24 @@ public enum DiskTrash: Sendable {
             if let trashed = resulting as URL? { return trashed }
             if !FileManager.default.fileExists(atPath: url.path) { return url }
         } catch {
-            // Drive and File Provider reject macOS Trash. Fall through.
+            // File Provider sometimes rejects trashItem. Same-volume Trash still works.
         }
-        return try moveToDumpTrash(url, dumpRoot: dumpRoot)
+        return try moveToVolumeTrash(url)
     }
 
-    public static func moveToDumpTrash(_ url: URL, dumpRoot: URL) throws -> URL {
-        let rel = Indexer.relativePath(url, root: dumpRoot)
-        let dest = PhotoRecord.canonicalURL(
-            root: dumpRoot.appendingPathComponent(dumpTrashFolder, isDirectory: true),
-            relative: rel.isEmpty ? url.lastPathComponent : rel
+    /// Finder Trash for that volume (`~/.Trash` locally, `GoogleDrive-…/.Trash` on Drive).
+    public static func moveToVolumeTrash(_ url: URL) throws -> URL {
+        let trashDir = try FileManager.default.url(
+            for: .trashDirectory,
+            in: .userDomainMask,
+            appropriateFor: url,
+            create: true
         )
-        try FileManager.default.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if FileManager.default.fileExists(atPath: dest.path) {
-            try FileManager.default.removeItem(at: dest)
-        }
+        let dest = uniqueDestination(in: trashDir, for: url)
         do {
             try FileManager.default.moveItem(at: url, to: dest)
             return dest
         } catch {
-            // Drive often can't rename; copy then delete works.
             try FileManager.default.copyItem(at: url, to: dest)
             do {
                 try FileManager.default.removeItem(at: url)
@@ -169,5 +137,19 @@ public enum DiskTrash: Sendable {
                 photo.hiddenDup, photo.fileSize
             ]
         )
+    }
+
+    private static func uniqueDestination(in directory: URL, for url: URL) -> URL {
+        var dest = directory.appendingPathComponent(url.lastPathComponent)
+        guard FileManager.default.fileExists(atPath: dest.path) else { return dest }
+        let stem = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        var i = 1
+        repeat {
+            let name = ext.isEmpty ? "\(stem) (\(i))" : "\(stem) (\(i)).\(ext)"
+            dest = directory.appendingPathComponent(name)
+            i += 1
+        } while FileManager.default.fileExists(atPath: dest.path)
+        return dest
     }
 }

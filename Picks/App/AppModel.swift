@@ -328,11 +328,7 @@ final class AppModel {
             scanStats.stills = max(0, scanStats.stills - 1)
             marks = (try? markStore?.marksByPhoto()) ?? [:]
             try reloadPhotos()
-            if DiskTrash.usedDumpTrash(trashed) {
-                showToast("\(photo.photoID) removed  ·  ⌘Z to undo")
-            } else {
-                showToast("\(photo.photoID) → Trash  ·  ⌘Z to undo")
-            }
+            showToast("\(photo.photoID) → Trash  ·  ⌘Z to undo")
         } catch {
             if !didPrompt, await askForWriteAccess(dump: root) {
                 await deleteCurrentAsync(didPrompt: true)
